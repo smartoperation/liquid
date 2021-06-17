@@ -21,6 +21,12 @@ var evaluatorTests = []struct {
 	{`'abc'`, "abc"},
 	{`"abc"`, "abc"},
 
+	{`"a\\bc"`, "a\\bc"},
+	{`"a\"bc"`, "a\"bc"},
+	{`"\u007b\u007b abc \u007d\u007d"`, "{{ abc }}"},
+	// TODO: single-quoted cannot be escaped
+	// {`'a\'bc'`, "a'bc"},
+
 	// Variables
 	{`n`, 123},
 

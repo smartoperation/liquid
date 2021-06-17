@@ -65,8 +65,20 @@ func (lex *lexer) Lex(out *yySymType) int {
 		}
 		action String {
 			tok = LITERAL
-			// TODO unescape \x
-			out.val = string(lex.data[lex.ts+1:lex.te-1])
+
+			var s string
+			// TODO: single-quoted cannot be escaped
+			if lex.data[lex.ts] == '\'' {
+				s = string(lex.data[lex.ts+1:lex.te-1])
+			} else {
+				unquotedStr, err := strconv.Unquote(string(lex.data[lex.ts:lex.te]))
+				if err != nil {
+					panic(err)
+				}
+				s = unquotedStr
+			}
+
+			out.val = s
 			fbreak;
 		}
 		action Relation { tok = RELATION; out.name = lex.token(); fbreak; }
@@ -76,7 +88,9 @@ func (lex *lexer) Lex(out *yySymType) int {
 		property = '.' (alpha | '_') . (alnum | '_' | '-')* '?' ? ;
 		int = '-'? digit+ ;
 		float = '-'? digit+ ('.' digit+)? ;
-		string = '"' (any - '"')* '"' | "'" (any - "'")* "'" ; # TODO escapes
+
+		dqchar = [^"\\] | ( '\\' any );
+		string = '"' . dqchar* . '"' | "'" (any - "'")*  "'" ;
 
 		main := |*
 			# statement selectors, should match constants in parser.go
