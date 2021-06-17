@@ -1,4 +1,4 @@
-module github.com/osteele/liquid
+module github.com/smartoperation/liquid
 
 go 1.16
 
