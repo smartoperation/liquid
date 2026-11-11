@@ -8,12 +8,22 @@ import (
 
 // Scan breaks a string into a sequence of Tokens.
 func Scan(data string, loc SourceLoc, delims []string) (tokens []Token) {
+	return scan(data, loc, delims, true)
+}
+
+// ScanWithoutTags is like Scan, but does not recognize tags.
+// Tag delimiters and their contents are returned as part of text tokens.
+func ScanWithoutTags(data string, loc SourceLoc, delims []string) (tokens []Token) {
+	return scan(data, loc, delims, false)
+}
+
+func scan(data string, loc SourceLoc, delims []string, tags bool) (tokens []Token) {
 
 	// Apply defaults
 	if len(delims) != 4 {
 		delims = []string{"{{", "}}", "{%", "%}"}
 	}
-	tokenMatcher := formTokenMatcher(delims)
+	tokenMatcher := formTokenMatcher(delims, tags)
 
 	// TODO error on unterminated {{ and {%
 	// TODO probably an error when a tag contains a {{ or {%, at least outside of a string
@@ -59,7 +69,15 @@ func Scan(data string, loc SourceLoc, delims []string) (tokens []Token) {
 	return tokens
 }
 
-func formTokenMatcher(delims []string) *regexp.Regexp {
+func formTokenMatcher(delims []string, tags bool) *regexp.Regexp {
+	// QuoteMeta will escape any of these that are regex commands
+	objectPattern := fmt.Sprintf(`%s-?\s*(.+?)\s*-?%s`,
+		regexp.QuoteMeta(delims[0]), regexp.QuoteMeta(delims[1]),
+	)
+	if !tags {
+		return regexp.MustCompile(objectPattern)
+	}
+
 	// On ending a tag we need to exclude anything that appears to be ending a tag that's nested
 	// inside the tag. We form the exclusion expression here.
 	// For example, if delims is default the exclusion expression is "[^%]|%[^}]".
@@ -73,13 +91,9 @@ func formTokenMatcher(delims []string) *regexp.Regexp {
 		}
 	}
 
-	tokenMatcher := regexp.MustCompile(
-		fmt.Sprintf(`%s-?\s*(.+?)\s*-?%s|%s-?\s*(\w+)(?:\s+((?:%v)+?))?\s*-?%s`,
-			// QuoteMeta will escape any of these that are regex commands
-			regexp.QuoteMeta(delims[0]), regexp.QuoteMeta(delims[1]),
-			regexp.QuoteMeta(delims[2]), strings.Join(exclusion, "|"), regexp.QuoteMeta(delims[3]),
-		),
+	tagPattern := fmt.Sprintf(`%s-?\s*(\w+)(?:\s+((?:%v)+?))?\s*-?%s`,
+		regexp.QuoteMeta(delims[2]), strings.Join(exclusion, "|"), regexp.QuoteMeta(delims[3]),
 	)
 
-	return tokenMatcher
+	return regexp.MustCompile(objectPattern + "|" + tagPattern)
 }
