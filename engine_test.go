@@ -79,6 +79,42 @@ func TestEngine_ParseAndRender_errors(t *testing.T) {
 	require.Error(t, err)
 }
 
+var disableTagsTests = []struct{ in, expected string }{
+	{`{% include "LICENSE" %}`, `{% include "LICENSE" %}`},
+	{`{% if true %}a{% else %}b{% endif %}`, `{% if true %}a{% else %}b{% endif %}`},
+	{`{% for a in ar %}{{ a }}{% endfor %}`, `{% for a in ar %}{% endfor %}`},
+	{`{%- assign y = 1 -%}`, `{%- assign y = 1 -%}`},
+	{`{% undefined_tag %}`, `{% undefined_tag %}`},
+	{`{% if %}`, `{% if %}`},
+	{`{% {{ x }} %}`, `{% 123 %}`},
+	{`{{ page.title }}`, "Introduction"},
+	{`{{ "upper" | upcase }}`, "UPPER"},
+}
+
+func TestEngine_DisableTags(t *testing.T) {
+	engine := NewEngine().DisableTags()
+	for i, test := range disableTagsTests {
+		t.Run(fmt.Sprint(i+1), func(t *testing.T) {
+			out, err := engine.ParseAndRenderString(test.in, testBindings)
+			require.NoErrorf(t, err, test.in)
+			require.Equalf(t, test.expected, out, test.in)
+		})
+	}
+}
+
+func TestEngine_DisableTags_delims(t *testing.T) {
+	engine := NewEngine().Delims("OBJ(", ")OBJ", "TAG(", ")TAG").DisableTags()
+	out, err := engine.ParseAndRenderString(`TAG( if true )TAGaTAG( endif )TAG OBJ( x )OBJ`, testBindings)
+	require.NoError(t, err)
+	require.Equal(t, `TAG( if true )TAGaTAG( endif )TAG 123`, out)
+}
+
+func TestEngine_withoutDisableTags(t *testing.T) {
+	out, err := NewEngine().ParseAndRenderString(`{% include "LICENSE" %}`, testBindings)
+	require.NoError(t, err)
+	require.Contains(t, out, "MIT License")
+}
+
 func BenchmarkEngine_Parse(b *testing.B) {
 	engine := NewEngine()
 	buf := new(bytes.Buffer)
