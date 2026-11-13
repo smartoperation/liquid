@@ -160,3 +160,30 @@ func TestScan_delims(t *testing.T) {
 		})
 	}
 }
+
+func TestScanWithoutTags(t *testing.T) {
+	scan := func(src string) []Token { return ScanWithoutTags(src, SourceLoc{}, nil) }
+
+	tokens := scan("{% tag args %}")
+	require.Len(t, tokens, 1)
+	require.Equal(t, TextTokenType, tokens[0].Type)
+	require.Equal(t, "{% tag args %}", tokens[0].Source)
+
+	tokens = scan("pre{% tag args %}mid{{ object }}post")
+	require.Equal(t, `[TextTokenType{"pre{% tag args %}mid"} ObjTokenType{"object"} TextTokenType{"post"}]`, fmt.Sprint(tokens))
+
+	tokens = scan("{{- object -}}")
+	require.Len(t, tokens, 1)
+	require.Equal(t, ObjTokenType, tokens[0].Type)
+	require.True(t, tokens[0].TrimLeft)
+	require.True(t, tokens[0].TrimRight)
+}
+
+func TestScanWithoutTags_delims(t *testing.T) {
+	scan := func(src string) []Token {
+		return ScanWithoutTags(src, SourceLoc{}, []string{"OBJECT@LEFT", "OBJECT#RIGHT", "TAG*LEFT", "TAG!RIGHT"})
+	}
+
+	tokens := scan("preTAG*LEFT tag args TAG!RIGHTmidOBJECT@LEFT object OBJECT#RIGHTpost")
+	require.Equal(t, `[TextTokenType{"preTAG*LEFT tag args TAG!RIGHTmid"} ObjTokenType{"object"} TextTokenType{"post"}]`, fmt.Sprint(tokens))
+}

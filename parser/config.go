@@ -7,6 +7,8 @@ type Config struct {
 	expressions.Config
 	Grammar Grammar
 	Delims  []string
+	// TagsDisabled makes the parser treat tags as text.
+	TagsDisabled bool
 }
 
 // NewConfig creates a parser Config.

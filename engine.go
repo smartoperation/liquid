@@ -110,3 +110,12 @@ func (e *Engine) Delims(objectLeft, objectRight, tagLeft, tagRight string) *Engi
 	e.cfg.Delims = []string{objectLeft, objectRight, tagLeft, tagRight}
 	return e
 }
+
+// DisableTags makes the engine treat tags as text, to be used in subsequent calls to
+// ParseTemplate, ParseTemplateLocation, ParseAndRender, or ParseAndRenderString.
+// For example, {% include "file" %} is rendered as is instead of including the file.
+// Objects such as {{ x }} are still evaluated.
+func (e *Engine) DisableTags() *Engine {
+	e.cfg.TagsDisabled = true
+	return e
+}
